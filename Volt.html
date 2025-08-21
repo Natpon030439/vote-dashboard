@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <title>ผลโหวตแบบเรียลไทม์</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body {
+      font-family: "Prompt", sans-serif;
+      background: #fffafc;
+      color: #333;
+      margin: 0;
+      padding: 20px;
+    }
+    h1 {
+      text-align: center;
+      color: #ff6f91;
+    }
+    .container {
+      max-width: 900px;
+      margin: auto;
+    }
+    .card {
+      background: #ffffffcc;
+      border-radius: 20px;
+      padding: 20px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+      margin-bottom: 20px;
+    }
+    input[type="text"] {
+      width: 70%;
+      padding: 10px;
+      border: 2px solid #ffd6e0;
+      border-radius: 10px;
+      outline: none;
+    }
+    button {
+      background: linear-gradient(45deg, #ffb6c1, #ffd6e0);
+      border: none;
+      padding: 10px 20px;
+      border-radius: 10px;
+      cursor: pointer;
+      color: #333;
+      font-weight: bold;
+      margin-left: 5px;
+      transition: transform 0.2s;
+    }
+    button:hover {
+      transform: scale(1.05);
+    }
+    .info {
+      text-align: center;
+      font-size: 18px;
+      color: #666;
+    }
+    .chart-buttons {
+      text-align: center;
+      margin-bottom: 15px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🌸 ผลโหวตเรียลไทม์ 🌸</h1>
+
+    <div class="card">
+      <p>ใส่ URL ของ Google Apps Script Web App:</p>
+      <input type="text" id="urlInput" placeholder="https://script.google.com/macros/s/.../exec">
+      <button onclick="setURL()">เริ่มใช้งาน</button>
+    </div>
+
+    <div class="card chart-buttons">
+      <button onclick="switchChart('bar')">แท่ง</button>
+      <button onclick="switchChart('pie')">วงกลม</button>
+    </div>
+
+    <div class="card">
+      <canvas id="voteChart"></canvas>
+    </div>
+
+    <div class="card info">
+      <p>จำนวนผู้โหวตรวม: <span id="totalVotes">0</span></p>
+      <p>อัปเดตล่าสุด: <span id="lastUpdate">-</span></p>
+    </div>
+  </div>
+
+  <script>
+    let apiUrl = "";
+    let chart;
+    let chartType = "bar"; // ค่าเริ่มต้น
+
+    const ctx = document.getElementById('voteChart').getContext('2d');
+    const pastelColors = ['#ffb6c1','#ffd6e0','#a5dee5','#d5a6e9','#fff5ba','#b5ead7'];
+
+    function setURL() {
+      apiUrl = document.getElementById("urlInput").value;
+      fetchData();
+      setInterval(fetchData, 3000);
+    }
+
+    function switchChart(type) {
+      chartType = type;
+      if (chart) {
+        chart.destroy(); // ลบกราฟเก่า
+        chart = null;
+      }
+      fetchData(); // วาดใหม่
+    }
+
+    async function fetchData() {
+      if (!apiUrl) return;
+      try {
+        const res = await fetch(apiUrl);
+        const data = await res.json();
+
+        const labels = data.rows.map(r => r.option);
+        const counts = data.rows.map(r => r.count);
+
+        if (!chart) {
+          chart = new Chart(ctx, {
+            type: chartType,
+            data: {
+              labels: labels,
+              datasets: [{
+                label: 'จำนวนโหวต',
+                data: counts,
+                backgroundColor: pastelColors,
+                borderRadius: chartType === 'bar' ? 10 : 0
+              }]
+            },
+            options: {
+              responsive: true,
+              plugins: {
+                legend: { display: chartType === 'pie' }
+              },
+              scales: chartType === 'bar' ? {
+                y: { beginAtZero: true }
+              } : {}
+            }
+          });
+        } else {
+          chart.data.labels = labels;
+          chart.data.datasets[0].data = counts;
+          chart.update();
+        }
+
+        document.getElementById("totalVotes").textContent = data.total;
+        document.getElementById("lastUpdate").textContent = new Date(data.updated_at).toLocaleTimeString();
+      } catch (err) {
+        console.error("Fetch error:", err);
+      }
+    }
+  </script>
+</body>
+</html>
